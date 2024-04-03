@@ -17,6 +17,11 @@ func (r Result[T]) Raise() T {
 }
 
 func Catch[T any](f func(error) T) T {
+	defer func() {
+		if r := recover(); r != nil {
+			panic(r)
+		}
+	}()
 	if r := recover(); r != nil {
 		return f(r.(Result[T]).Err)
 	}
