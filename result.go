@@ -16,16 +16,42 @@ func (r Result[T]) Raise() T {
 	return r.Ok
 }
 
-func Catch[T any](f func(error) T) T {
+func Rescue[T any](f func(error) T) T {
 	defer func() {
 		if r := recover(); r != nil {
-			panic(r)
+			switch x := r.(type) {
+			case Result[any]:
+				f(x.Err)
+			case error:
+				f(x)
+			default:
+				panic(r)
+			}
 		}
 	}()
-	if r := recover(); r != nil {
-		return f(r.(Result[T]).Err)
-	}
 	return f(nil)
+}
+
+func (r Result[T]) Throw() T {
+	if r.Err != nil {
+		panic(r)
+	}
+	return r.Ok
+}
+
+func Catch(ret *Result[T]) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch x := r.(type) {
+			case Result[T]:
+				*ret = x
+			case error:
+				*ret = Err(x)
+			default:
+				panic(r)
+			}
+		}
+	}
 }
 
 func (r Result[T]) Unwrap() (T, error) {
@@ -63,6 +89,7 @@ func Ok[T any](v T) Result[T] {
 func Err[T any](err error) Result[T] {
 	return Result[T]{Err: err}
 }
+
 
 func Bind[T, U any](r Result[T], f func(T) Result[U]) Result[U] {
 	if r.Err != nil {
