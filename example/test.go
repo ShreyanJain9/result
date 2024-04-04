@@ -3,15 +3,20 @@ package main
 import (
 	"fmt"
 	"github.com/ShreyanJain9/result"
+	"os"
 )
 
-func WriteStringToFile(filename Result[string], data Result[string]) (res Result[int]) {
+func WriteStringToFile(filename string, data string) (res result.Result[int]) {
 	defer result.Catch(&res)
 
-	filename := filename.Throw()
-	data := data.Throw()
+	result.Try(fmt.Println(filename, data))
 
-	result.Wrap(fmt.Println(filename)).Throw()
-	result.Wrap(fmt.Println(data)).Throw()
+	file := result.Try(os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644))
+	result.Try(file.Write([]byte(data)))
 
+	return result.Ok(0)
+}
+
+func main() {
+	WriteStringToFile("hello.txt", "hello").Print()
 }

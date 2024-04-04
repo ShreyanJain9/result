@@ -9,18 +9,11 @@ type Result[T any] struct {
 	Err error
 }
 
-func (r Result[T]) Raise() T {
-	if r.Err != nil {
-		panic(r)
-	}
-	return r.Ok
-}
-
 func Rescue[T any](f func(error) T) T {
 	defer func() {
 		if r := recover(); r != nil {
 			switch x := r.(type) {
-			case Result[any]:
+			case Result[T]:
 				f(x.Err)
 			case error:
 				f(x)
@@ -32,24 +25,26 @@ func Rescue[T any](f func(error) T) T {
 	return f(nil)
 }
 
+func Try[T any](ok T, err error) T {
+	return Wrap(ok, err).Throw()
+}
+
 func (r Result[T]) Throw() T {
 	if r.Err != nil {
-		panic(r)
+		panic(r.Err)
 	}
 	return r.Ok
 }
 
-func Catch(ret *Result[T]) {
-	defer func() {
-		if r := recover(); r != nil {
-			switch x := r.(type) {
-			case Result[T]:
-				*ret = x
-			case error:
-				*ret = Err(x)
-			default:
-				panic(r)
-			}
+func Catch[T any](ret *Result[T]) {
+	if r := recover(); r != nil {
+		switch x := r.(type) {
+		case Result[T]:
+			*ret = x
+		case error:
+			*ret = Err[T](x)
+		default:
+			panic(r)
 		}
 	}
 }
@@ -89,7 +84,6 @@ func Ok[T any](v T) Result[T] {
 func Err[T any](err error) Result[T] {
 	return Result[T]{Err: err}
 }
-
 
 func Bind[T, U any](r Result[T], f func(T) Result[U]) Result[U] {
 	if r.Err != nil {
